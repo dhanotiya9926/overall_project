@@ -1,207 +1,248 @@
-// =====================================
-// BACKEND API URL
-// =====================================
+// ========================================
+// API CONFIGURATION
+// ========================================
 
-const API_URL = "https://myproject.onrender.com";
+const API_URL = ""; 
 
-// =====================================
-// HELPER FUNCTION FOR API RESPONSE
-// =====================================
+// JWT Token
+let accessToken = localStorage.getItem("access_token");
 
-async function getResponseData(response) {
 
-    const data = await response.json();
+// ========================================
+// HELPER FUNCTION
+// ========================================
 
-    if (!response.ok) {
-        throw new Error(
-            typeof data.detail === "string"
-                ? data.detail
-                : JSON.stringify(data.detail || data)
-        );
+async function apiRequest(endpoint, options = {}) {
+
+    const headers = {
+        "Content-Type": "application/json",
+        ...options.headers
+    };
+
+    // Add JWT token if available
+    if (accessToken) {
+        headers["Authorization"] = `Bearer ${accessToken}`;
     }
-
-    return data;
-}
-
-
-// =====================================
-// 1. USER REGISTRATION
-// =====================================
-
-document.getElementById("registerForm").addEventListener(
-    "submit", async function(event) {
-
-    event.preventDefault();
-
-    const full_name = document.getElementById("regUsername").value;
-    const email = document.getElementById("regEmail").value;
-    const password = document.getElementById("regPassword").value;
 
     try {
 
-        const response = await fetch(`${API_URL}/register`, {
+        const response = await fetch(`${API_URL}${endpoint}`, {
+            ...options,
+            headers
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(
+                typeof data.detail === "string"
+                    ? data.detail
+                    : JSON.stringify(data.detail || data)
+            );
+        }
+
+        return data;
+
+    } catch (error) {
+
+        console.error("API Error:", error);
+
+        throw error;
+    }
+}
+
+
+// ========================================
+// 1. USER REGISTRATION
+// ========================================
+
+const registerForm = document.getElementById("registerForm");
+
+registerForm.addEventListener("submit", async function (event) {
+
+    event.preventDefault();
+
+    const inputs = registerForm.querySelectorAll("input");
+
+    const full_name = inputs[0].value.trim();
+    const email = inputs[1].value.trim();
+    const password = inputs[2].value;
+
+    const message = document.getElementById("registerMessage");
+
+    try {
+
+        message.innerText = "Registering...";
+
+        const data = await apiRequest("/register", {
 
             method: "POST",
 
-            headers: {
-                "Content-Type": "application/json"
-            },
-
             body: JSON.stringify({
-
                 full_name: full_name,
                 email: email,
                 password: password
-
             })
 
         });
 
-        const data = await getResponseData(response);
+        message.innerText = "Registration Successful!";
 
-        document.getElementById("registerMessage").innerText =
-            "Registration Successful!";
+        registerForm.reset();
 
-        console.log("Registration Response:", data);
+        console.log("Registered User:", data);
 
-        document.getElementById("registerForm").reset();
+    } catch (error) {
 
-    }
-
-    catch(error) {
-
-        document.getElementById("registerMessage").innerText =
-            error.message;
-
-        console.error("Registration Error:", error);
+        message.innerText = error.message;
 
     }
 
 });
 
 
-// =====================================
+// ========================================
 // 2. USER LOGIN
-// =====================================
+// ========================================
 
-document.getElementById("loginForm").addEventListener(
-    "submit", async function(event) {
+const loginForm = document.getElementById("loginForm");
+
+loginForm.addEventListener("submit", async function (event) {
 
     event.preventDefault();
 
-    const email = document.getElementById("loginEmail").value;
+    const email = document.getElementById("loginEmail").value.trim();
+
     const password = document.getElementById("loginPassword").value;
+
+    const message = document.getElementById("loginMessage");
 
     try {
 
-        const response = await fetch(`${API_URL}/login`, {
+        message.innerText = "Logging in...";
+
+        const data = await apiRequest("/login", {
 
             method: "POST",
 
-            headers: {
-                "Content-Type": "application/json"
-            },
-
             body: JSON.stringify({
-
                 email: email,
                 password: password
-
             })
 
         });
 
-        const data = await getResponseData(response);
+        // Save JWT Token
+        accessToken = data.token;
 
-        // Store JWT Token
+        localStorage.setItem("access_token", accessToken);
 
-        localStorage.setItem("access_token", data.token);
+        message.innerText = "Login Successful!";
 
-        document.getElementById("loginMessage").innerText =
-            "Login Successful!";
+        loginForm.reset();
 
         console.log("Login Response:", data);
 
-        document.getElementById("loginForm").reset();
+    } catch (error) {
 
-    }
-
-    catch(error) {
-
-        document.getElementById("loginMessage").innerText =
-            error.message;
-
-        console.error("Login Error:", error);
+        message.innerText = error.message;
 
     }
 
 });
 
 
-// =====================================
+// ========================================
 // 3. GET USER PROFILE
-// =====================================
+// ========================================
 
 async function getProfile() {
 
-    const token = localStorage.getItem("access_token");
-
-    if (!token) {
-
-        alert("Please login first!");
-
-        return;
-
-    }
+    const result = document.getElementById("result");
 
     try {
 
-        const response = await fetch(`${API_URL}/profile`, {
+        result.innerText = "Loading Profile...";
 
-            method: "GET",
+        if (!accessToken) {
+            throw new Error("Please login first!");
+        }
 
-            headers: {
+        const data = await apiRequest("/profile", {
 
-                "Authorization": `Bearer ${token}`
-
-            }
+            method: "GET"
 
         });
 
-        const data = await getResponseData(response);
+        result.innerText = JSON.stringify(data, null, 2);
 
-        document.getElementById("result").innerText =
-            JSON.stringify(data, null, 2);
+        console.log("User Profile:", data);
 
-        console.log("Profile:", data);
+    } catch (error) {
 
-    }
-
-    catch(error) {
-
-        document.getElementById("result").innerText =
-            error.message;
-
-        console.error("Profile Error:", error);
+        result.innerText = error.message;
 
     }
 
 }
 
 
-// =====================================
-// 4. USER LOGOUT
-// =====================================
+// ========================================
+// 4. GET ALL USERS
+// ========================================
+
+async function getUsers() {
+
+    const result = document.getElementById("result");
+
+    try {
+
+        result.innerText = "Loading Users...";
+
+        if (!accessToken) {
+            throw new Error("Please login first!");
+        }
+
+        const data = await apiRequest("/users", {
+
+            method: "GET"
+
+        });
+
+        result.innerText = JSON.stringify(data, null, 2);
+
+        console.log("All Users:", data);
+
+    } catch (error) {
+
+        result.innerText = error.message;
+
+    }
+
+}
+
+
+// ========================================
+// 5. USER LOGOUT
+// ========================================
 
 function logout() {
 
+    accessToken = null;
+
     localStorage.removeItem("access_token");
 
-    document.getElementById("loginMessage").innerText =
+    document.getElementById("result").innerText =
         "Logged out successfully!";
 
-    document.getElementById("result").innerText = "";
+    document.getElementById("loginMessage").innerText =
+        "You are logged out.";
 
-    alert("Logout Successful!");
+    console.log("User Logged Out");
 
 }
+
+
+// ========================================
+// END OF SCRIPT
+// ========================================
