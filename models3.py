@@ -11,7 +11,7 @@ class User(Base):
     full_name:Mapped[str]=mapped_column(String(200),nullable=False)
     email:Mapped[str]=mapped_column(String(255),unique=True,index=True,nullable=False)
     hash_password:Mapped[str]=mapped_column(String(500),nullable=False)
-    created_at:Mapped[datetime]=mapped_column(DateTime,default=datetime.now(timezone.utc))
+    created_at:Mapped[datetime]=mapped_column(DateTime,default=lambda:datetime.now(timezone.utc))
     
 
     updated_at: Mapped[datetime] = mapped_column(

@@ -1,6 +1,6 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker,DeclarativeBase
-DATABASE_URL = "postgresql+psycopg://postgres:Abhi%402733@host.docker.internal:5432/fantastic"
+DATABASE_URL = "postgresql+psycopg://postgres:Abhi%402733@localhost:5432/fantastic"
 
 engine=create_engine(DATABASE_URL)
 
